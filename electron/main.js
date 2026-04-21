@@ -68,8 +68,13 @@ ipcMain.handle('start-session', async (event, eventName) => {
     const baseDir = path.join(app.getPath('documents'), 'Photobooth_Output');
     
     // Format Tanggal (YYYY-MM-DD) & Waktu (HH-mm-ss)
-    const dateStr = new Date().toISOString().split('T')[0]; 
-    const timeStr = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    
+    const dateStr = `${year}-${month}-${day}`; 
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
     
     // Path: Documents/Photobooth_Output/2026-04-21_NamaEvent/14-30-22_Customer
     const safeEventName = (eventName || 'DefaultEvent').replace(/[^a-zA-Z0-9]/g, '_');

@@ -40,9 +40,10 @@ db.exec(`
 const stmt = db.prepare('SELECT COUNT(*) as count FROM settings');
 if (stmt.get().count === 0) {
     db.prepare(`
-        INSERT INTO settings (nama_event, saldo_awal, hpp_kertas, hpp_tinta, biaya_ops)
-        VALUES (?, ?, ?, ?, ?)
-    `).run('Event Default', 0, 3000, 2000, 0);
+        INSERT INTO settings (
+            nama_event, saldo_awal, hpp_kertas, hpp_tinta, biaya_ops, midtrans_server_key, midtrans_client_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run('Event Default', 0, 3000, 2000, 0, '', '');
 }
 // Auto-migrate untuk database lokal yang sudah terlanjur dibuat
 try {
