@@ -9,7 +9,7 @@ const coreApi = new midtransClient.CoreApi({
     isProduction: false,
     serverKey: process.env.MIDTRANS_SERVER_KEY,
     clientKey: process.env.MIDTRANS_CLIENT_KEY
-});
+});git push -u origin main
 
 console.log("[BACKEND] Status API Key Midtrans:", !!process.env.MIDTRANS_SERVER_KEY ? "Loaded dari .env" : "Menggunakan Fallback");
 
