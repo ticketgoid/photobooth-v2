@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-retro-bg overflow-hidden select-none;
+  /* overflow-hidden dan select-none wajib untuk aplikasi Kiosk agar user tidak bisa scroll/block text */
+}
+
+@layer components {
+  /* Box standar gaya retro */
+  .retro-window {
+    @apply bg-retro-window border-4 border-retro-border shadow-[8px_8px_0px_0px_rgba(51,51,51,1)];
+  }
+  
+  /* Header jendela retro */
+  .retro-header {
+    @apply bg-retro-header border-b-4 border-retro-border px-4 py-2 font-pixel text-white flex justify-between items-center text-sm tracking-widest;
+  }
+  
+  /* Tombol interaktif retro */
+  .retro-btn {
+    @apply bg-retro-success border-4 border-retro-border font-pixel text-white shadow-[4px_4px_0px_0px_rgba(51,51,51,1)] 
+    active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer;
+  }
+  
+  .retro-btn-danger {
+    @apply bg-retro-header border-4 border-retro-border font-pixel text-white shadow-[4px_4px_0px_0px_rgba(51,51,51,1)] 
+    active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer;
+  }
+}
