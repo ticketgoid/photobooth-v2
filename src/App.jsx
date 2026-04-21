@@ -275,7 +275,10 @@ function LandingScreen() {
 // ==========================================
 function App() {
   const { settings, fetchSettings, isAdminOpen, toggleAdmin, currentScreen } = useStore();
-  const [formData, setFormData] = useState({ nama_event: '', saldo_awal: 0, hpp_kertas: 0, hpp_tinta: 0, biaya_ops: 0 });
+  const [formData, setFormData] = useState({ 
+    nama_event: '', saldo_awal: 0, hpp_kertas: 0, hpp_tinta: 0, biaya_ops: 0,
+    midtrans_server_key: '', midtrans_client_key: ''
+  });
 
   useEffect(() => {
     fetchSettings();
@@ -313,6 +316,14 @@ function App() {
               <div className="grid grid-cols-2 gap-4"><div className="flex flex-col"><label>Saldo Awal (Rp):</label><input type="number" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.saldo_awal} onChange={e => setFormData({...formData, saldo_awal: parseInt(e.target.value) || 0})} /></div><div className="flex flex-col"><label>Biaya Ops (Rp):</label><input type="number" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.biaya_ops} onChange={e => setFormData({...formData, biaya_ops: parseInt(e.target.value) || 0})} /></div></div>
               <div className="grid grid-cols-2 gap-4"><div className="flex flex-col"><label>HPP Kertas (Rp):</label><input type="number" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.hpp_kertas} onChange={e => setFormData({...formData, hpp_kertas: parseInt(e.target.value) || 0})} /></div><div className="flex flex-col"><label>HPP Tinta (Rp):</label><input type="number" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.hpp_tinta} onChange={e => setFormData({...formData, hpp_tinta: parseInt(e.target.value) || 0})} /></div></div>
               <div className="flex justify-end gap-4 mt-4"><button type="button" onClick={toggleAdmin} className="retro-btn-danger px-6 py-2">CANCEL</button><button type="submit" className="retro-btn px-6 py-2">SAVE.EXE</button></div>
+              <div className="flex flex-col mt-2">
+                <label>Midtrans Server Key (Sandbox):</label>
+                <input type="text" className="border-4 border-retro-border p-2 bg-white outline-none font-sys text-lg" value={formData.midtrans_server_key} onChange={e => setFormData({...formData, midtrans_server_key: e.target.value})} placeholder="SB-Mid-server-..." />
+              </div>
+              <div className="flex flex-col">
+                <label>Midtrans Client Key (Sandbox):</label>
+                <input type="text" className="border-4 border-retro-border p-2 bg-white outline-none font-sys text-lg" value={formData.midtrans_client_key} onChange={e => setFormData({...formData, midtrans_client_key: e.target.value})} placeholder="SB-Mid-client-..." />
+              </div>
             </form>
           </div>
         </div>

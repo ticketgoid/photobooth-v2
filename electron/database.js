@@ -14,7 +14,9 @@ db.exec(`
         saldo_awal INTEGER,
         hpp_kertas INTEGER,
         hpp_tinta INTEGER,
-        biaya_ops INTEGER
+        biaya_ops INTEGER,
+        midtrans_server_key TEXT,
+        midtrans_client_key TEXT
     );
     
     CREATE TABLE IF NOT EXISTS sessions (
@@ -41,6 +43,13 @@ if (stmt.get().count === 0) {
         INSERT INTO settings (nama_event, saldo_awal, hpp_kertas, hpp_tinta, biaya_ops)
         VALUES (?, ?, ?, ?, ?)
     `).run('Event Default', 0, 3000, 2000, 0);
+}
+// Auto-migrate untuk database lokal yang sudah terlanjur dibuat
+try {
+    db.exec("ALTER TABLE settings ADD COLUMN midtrans_server_key TEXT DEFAULT ''");
+    db.exec("ALTER TABLE settings ADD COLUMN midtrans_client_key TEXT DEFAULT ''");
+} catch(e) {
+    // Abaikan jika kolom sudah ada
 }
 
 module.exports = db;
