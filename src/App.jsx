@@ -3,7 +3,20 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useStore } from './store/useStore';
 
 // ==========================================
-// KOMPONEN: VISUAL TEMPLATE EDITOR
+// UTILITY: FORMATTER RUPIAH 
+// ==========================================
+const formatRp = (val) => {
+  if (val === '' || val === null || val === undefined || isNaN(val)) return '';
+  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+const parseRp = (val) => {
+  if (typeof val !== 'string') return val;
+  const parsed = parseInt(val.replace(/\./g, ''), 10);
+  return isNaN(parsed) ? '' : parsed;
+};
+
+// ==========================================
+// VISUAL TEMPLATE EDITOR
 // ==========================================
 function VisualEditor({ template, onSave, onCancel }) {
   const initialSlots = typeof template.slots === 'string' ? JSON.parse(template.slots) : (template.slots || []);
@@ -13,86 +26,46 @@ function VisualEditor({ template, onSave, onCancel }) {
 
   useEffect(() => {
     if (containerRef.current) {
-      const containerWidth = containerRef.current.clientWidth;
-      const containerHeight = containerRef.current.clientHeight;
-      const scaleX = (containerWidth - 40) / Number(template.width);
-      const scaleY = (containerHeight - 40) / Number(template.height);
+      const scaleX = (containerRef.current.clientWidth - 40) / Number(template.width);
+      const scaleY = (containerRef.current.clientHeight - 40) / Number(template.height);
       setScale(Math.min(scaleX, scaleY, 1));
     }
   }, [template]);
 
   const handlePointerDown = (e, index, action) => {
     e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startSlot = { ...slots[index] };
-
+    const startX = e.clientX; const startY = e.clientY; const startSlot = { ...slots[index] };
     const handlePointerMove = (moveEvent) => {
-      const dx = (moveEvent.clientX - startX) / scale;
-      const dy = (moveEvent.clientY - startY) / scale;
-      
+      const dx = (moveEvent.clientX - startX) / scale; const dy = (moveEvent.clientY - startY) / scale;
       const newSlots = [...slots];
-      if (action === 'move') {
-        newSlots[index] = { ...startSlot, left: Math.round(startSlot.left + dx), top: Math.round(startSlot.top + dy) };
-      } else if (action === 'resize') {
-        newSlots[index] = { ...startSlot, width: Math.max(50, Math.round(startSlot.width + dx)), height: Math.max(50, Math.round(startSlot.height + dy)) };
-      }
+      if (action === 'move') newSlots[index] = { ...startSlot, left: Math.round(startSlot.left + dx), top: Math.round(startSlot.top + dy) };
+      else if (action === 'resize') newSlots[index] = { ...startSlot, width: Math.max(50, Math.round(startSlot.width + dx)), height: Math.max(50, Math.round(startSlot.height + dy)) };
       setSlots(newSlots);
     };
-
-    const handlePointerUp = () => {
-      window.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('mouseup', handlePointerUp);
-    };
-
-    window.addEventListener('mousemove', handlePointerMove);
-    window.addEventListener('mouseup', handlePointerUp);
+    const handlePointerUp = () => { window.removeEventListener('mousemove', handlePointerMove); window.removeEventListener('mouseup', handlePointerUp); };
+    window.addEventListener('mousemove', handlePointerMove); window.addEventListener('mouseup', handlePointerUp);
   };
 
-  const addSlot = () => { setSlots([...slots, { top: 50, left: 50, width: 300, height: 200 }]); };
-  const removeSlot = (index) => { setSlots(slots.filter((_, i) => i !== index)); };
-
   return (
-    <div className="fixed inset-0 bg-black/90 z-[60] flex p-6 gap-6">
+    <div className="fixed inset-0 bg-black/90 z-[70] flex p-6 gap-6">
       <div ref={containerRef} className="flex-1 editor-canvas-container flex items-center justify-center relative overflow-hidden">
-        <div 
-          style={{ 
-            width: Number(template.width), 
-            height: Number(template.height), 
-            transform: `scale(${scale})`, 
-            transformOrigin: 'center center',
-            backgroundImage: `url('http://localhost:3000/templates/${template.filename}')`, 
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center'
-          }} 
-          className="relative shadow-[0_0_20px_rgba(0,0,0,0.5)] bg-white shrink-0"
-        >
+        <div style={{ width: Number(template.width), height: Number(template.height), transform: `scale(${scale})`, transformOrigin: 'center center', backgroundImage: `url('http://localhost:3000/templates/${template.filename}')`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }} className="relative shadow-[0_0_20px_rgba(0,0,0,0.5)] bg-white shrink-0">
           {slots.map((slot, i) => (
-            <div 
-              key={i} className="slot-box"
-              style={{ top: slot.top, left: slot.left, width: slot.width, height: slot.height }}
-              onMouseDown={(e) => handlePointerDown(e, i, 'move')}
-            >
-              {i + 1}
-              <div className="resize-handle" onMouseDown={(e) => { e.stopPropagation(); handlePointerDown(e, i, 'resize'); }} />
+            <div key={i} className="slot-box" style={{ top: slot.top, left: slot.left, width: slot.width, height: slot.height }} onMouseDown={(e) => handlePointerDown(e, i, 'move')}>
+              {i + 1}<div className="resize-handle" onMouseDown={(e) => { e.stopPropagation(); handlePointerDown(e, i, 'resize'); }} />
             </div>
           ))}
         </div>
       </div>
-
       <div className="w-[350px] retro-window bg-white flex flex-col shrink-0">
         <div className="retro-header">⚙️ EDITOR TEMPLATE</div>
         <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto">
-          <button onClick={addSlot} className="retro-btn py-2">➕ TAMBAH SLOT FOTO</button>
-          
+          <button onClick={() => setSlots([...slots, { top: 50, left: 50, width: 300, height: 200 }])} className="retro-btn py-2">➕ TAMBAH SLOT FOTO</button>
           <div className="font-sys text-lg border-t-2 border-dashed border-gray-400 pt-4 mt-2">
-            <p className="font-bold mb-2">Daftar Slot:</p>
-            {slots.length === 0 && <p className="text-gray-500">Belum ada slot foto.</p>}
             {slots.map((slot, i) => (
               <div key={i} className="flex justify-between items-center bg-gray-100 p-2 border-2 border-retro-border mb-2">
-                <span>Slot {i + 1} ({slot.width}x{slot.height})</span>
-                <button onClick={() => removeSlot(i)} className="text-red-600 font-bold hover:scale-110">X</button>
+                <span>Slot {i + 1}</span>
+                <button onClick={() => setSlots(slots.filter((_, idx) => idx !== i))} className="text-red-600 font-bold hover:scale-110">X</button>
               </div>
             ))}
           </div>
@@ -107,294 +80,353 @@ function VisualEditor({ template, onSave, onCancel }) {
 }
 
 // ==========================================
-// KOMPONEN: LAYAR PEMILIHAN TEMPLATE
-// ==========================================
-function TemplateScreen({ onSelectTemplate }) {
-  const { templates, setScreen } = useStore();
-  const visibleTemplates = templates.filter(t => t.is_visible === 1);
-
-  return (
-    <div className="flex flex-col items-center justify-center h-screen bg-retro-bg p-10">
-      <h1 className="font-pixel text-4xl text-retro-border mb-8 drop-shadow-md">Pilih Frame Favoritmu</h1>
-      
-      <div className="flex flex-wrap justify-center gap-8 overflow-y-auto w-full max-w-6xl pb-10">
-        {visibleTemplates.length === 0 && (
-          <div className="retro-window p-8 text-xl font-sys text-center">Belum ada template yang diaktifkan.<br/>Hubungi Admin.</div>
-        )}
-        
-        {visibleTemplates.map(tpl => (
-          <div 
-            key={tpl.id} 
-            onClick={() => onSelectTemplate(tpl)}
-            className="retro-window w-[250px] bg-white cursor-pointer hover:scale-105 hover:border-blue-500 transition-transform group flex flex-col"
-          >
-            <div className="h-[350px] border-b-4 border-retro-border bg-gray-200 overflow-hidden flex items-center justify-center p-2 relative">
-              <img src={`http://localhost:3000/templates/${tpl.filename}`} alt="Frame" className="max-w-full max-h-full object-contain drop-shadow-lg" />
-              
-              <div className="absolute top-2 right-2 font-pixel text-[10px] text-white px-2 py-1 border-2 border-retro-border shadow-sm bg-retro-header">
-                {tpl.is_free === 1 ? 'GRATIS' : `Rp ${(tpl.price/1000)}k`}
-              </div>
-            </div>
-            <div className="p-4 text-center font-pixel text-sm group-hover:bg-blue-100 transition-colors">PILIH FRAME</div>
-          </div>
-        ))}
-      </div>
-
-      <button onClick={() => setScreen('landing')} className="retro-btn-danger px-8 py-3 absolute bottom-8 left-8">KEMBALI</button>
-    </div>
-  );
-}
-
-// ==========================================
-// KOMPONEN UTAMA (ROUTER & ADMIN)
+// KOMPONEN UTAMA
 // ==========================================
 function App() {
   const store = useStore();
-  const [formData, setFormData] = useState({ nama_event: '', saldo_awal: 0, hpp_kertas: 0, hpp_tinta: 0, biaya_ops: 0, midtrans_server_key: '', midtrans_client_key: '', app_mode: 'online' });
-  const [adminTab, setAdminTab] = useState('umum');
+  const [isGlobalOpen, setGlobalOpen] = useState(false);
+  const [isTemplateOpen, setTemplateOpen] = useState(false);
+  
+  const [globalData, setGlobalData] = useState({ hpp_kertas: '', hpp_tinta: '', biaya_ops: '', midtrans_server_key: '', midtrans_client_key: '', app_mode: 'online' });
   const [editingTemplate, setEditingTemplate] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newEventData, setNewEventData] = useState({ nama_event: '', saldo_awal: '' });
+  const [selectedEventTemplates, setSelectedEventTemplates] = useState([]); 
+
+  const [customerTemplate, setCustomerTemplate] = useState(null);
+  const [finalResult, setFinalResult] = useState(null);
+  const [qrUrl, setQrUrl] = useState(null);
+  const [statusText, setStatusText] = useState("");
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [countdown, setCountdown] = useState(null);
 
   useEffect(() => {
-    store.fetchSettings();
-    store.fetchTemplates();
-    store.fetchServerIP();
+    store.fetchSettings(); store.fetchTemplates(); store.fetchServerIP(); 
+    store.fetchActiveEvent(); store.fetchRecentEvents();
     
-    const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') store.toggleAdmin();
+    const handleKeyDown = async (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') { setGlobalOpen(prev => !prev); setTemplateOpen(false); }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 't') { setTemplateOpen(prev => !prev); setGlobalOpen(false); }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'x') {
+        const ev = await window.electronAPI.getActiveEvent();
+        if (ev && confirm(`TUTUP event "${ev.nama_event}" secara permanen?`)) {
+          await window.electronAPI.closeEvent(ev.id);
+          store.fetchActiveEvent(); 
+          store.fetchRecentEvents();
+          setShowCreateForm(false);
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  useEffect(() => { if (store.settings) setFormData(store.settings); }, [store.settings]);
+  useEffect(() => { if (store.settings) setGlobalData(store.settings); }, [store.settings]);
+  useEffect(() => { if (store.recentEvents.length === 0) setShowCreateForm(true); }, [store.recentEvents]);
 
-  const handleTemplateSelect = async (tpl) => {
-    setSelectedTemplate(tpl);
-    if (window.electronAPI) {
-      const folder = await window.electronAPI.startSession(store.settings?.nama_event || 'EventDefault');
-      store.setSessionFolder(folder);
-    }
-    if (store.settings?.app_mode === 'offline' || tpl.is_free === 1) { store.setScreen('camera'); } 
-    else { store.setupPayment(tpl.price, 'camera'); }
+  // HANDLERS
+  const saveGlobalSettings = async (e) => {
+    e.preventDefault(); await window.electronAPI.saveSettings(globalData); store.fetchSettings(); alert("Pengaturan Global Disimpan!"); setGlobalOpen(false);
   };
 
-  const handleSaveSettings = async (e) => {
-    e.preventDefault();
-    if (window.electronAPI) {
-      await window.electronAPI.saveSettings(formData);
-      store.fetchSettings();
-      alert("Pengaturan Disimpan!");
-    }
-  };
-
-  const handleUploadTemplate = async () => {
+  const uploadMasterTemplate = async () => {
     const filePath = await window.electronAPI.openFileDialog();
-    if (filePath) {
-      const res = await window.electronAPI.saveNewTemplate({ tempPath: filePath });
-      if (res.success) { store.fetchTemplates(); alert("Template Berhasil Diunggah!"); }
-      else alert("Gagal mengunggah: " + res.error);
+    if (filePath) { const res = await window.electronAPI.saveNewTemplate({ tempPath: filePath }); if (res.success) store.fetchTemplates(); }
+  };
+  const updateMasterAttr = async (tpl, field, value) => { await window.electronAPI.updateTemplate({ ...tpl, [field]: value }); store.fetchTemplates(); };
+
+  // CREATE SESSION
+  const toggleEventTemplate = (tpl) => {
+    const exists = selectedEventTemplates.find(t => t.id === tpl.id);
+    if (exists) setSelectedEventTemplates(selectedEventTemplates.filter(t => t.id !== tpl.id));
+    else setSelectedEventTemplates([...selectedEventTemplates, { ...tpl, override_price: tpl.price }]);
+  };
+
+  const createEventSession = async () => {
+    if(!newEventData.nama_event) return alert("Nama Event wajib diisi!");
+    if(selectedEventTemplates.length === 0) return alert("Minimal pilih 1 template untuk event ini!");
+    
+    const res = await window.electronAPI.createEvent({
+      nama_event: newEventData.nama_event,
+      saldo_awal: parseRp(newEventData.saldo_awal) || 0,
+      templates: selectedEventTemplates 
+    });
+    
+    if(res.success) {
+      setNewEventData({ nama_event: '', saldo_awal: '' });
+      setSelectedEventTemplates([]);
+      setShowCreateForm(false);
+      store.fetchActiveEvent(); 
+      store.fetchRecentEvents();
+    } else alert("Sistem Gagal: " + res.error);
+  };
+
+  const reopenEvent = async (eventId) => {
+    if(confirm("Lanjutkan sesi event ini?")) {
+      await window.electronAPI.reopenEvent(eventId);
+      store.fetchActiveEvent();
     }
   };
 
-  const handleUpdateTemplateAttr = async (tpl, field, value) => {
-    const updated = { ...tpl, [field]: value };
-    await window.electronAPI.updateTemplate(updated);
-    store.fetchTemplates();
+  // CUSTOMER FLOW
+  const startCustomerPhoto = async (tpl) => {
+    setCustomerTemplate(tpl);
+    const slotsArr = typeof tpl.slots === 'string' ? JSON.parse(tpl.slots) : (tpl.slots || []);
+    store.setCapturedPhotos(Array(slotsArr.length).fill(null));
+
+    const folder = await window.electronAPI.startCustomerSession(store.activeEvent.id);
+    store.setSessionFolder(folder);
+
+    if (store.settings?.app_mode === 'offline' || tpl.override_price <= 0) { store.setScreen('camera'); startCameraHardware(); } 
+    else { store.setupPayment(tpl.override_price, 'camera'); initMidtrans(tpl.override_price); }
   };
 
-  const handleDeleteTemplate = async (id) => {
-    if (confirm("Hapus template ini permanen?")) {
-      await window.electronAPI.deleteTemplate(id);
-      store.fetchTemplates();
+  const initMidtrans = async (amount) => {
+    setQrUrl(null); setStatusText("Membuat Tagihan...");
+    const res = await window.electronAPI.createQris(amount);
+    if(res.success) {
+      setQrUrl(res.qrUrl); setStatusText("Menunggu Pembayaran...");
+      const chk = setInterval(async () => {
+        const st = await window.electronAPI.checkPayment(res.orderId);
+        if(st.success && st.status === 'settlement') { clearInterval(chk); setStatusText("Lunas!"); setTimeout(() => { store.setScreen('camera'); startCameraHardware(); }, 1500); }
+      }, 3000);
+    } else setStatusText("Error Midtrans");
+  };
+
+  const startCameraHardware = async () => {
+    try { const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } }); if(videoRef.current) videoRef.current.srcObject = stream; } catch(e) {}
+  };
+
+  const takePhotoAction = async () => {
+    const current = [...store.capturedPhotos];
+    for(let i=0; i<current.length; i++) {
+      if(current[i] !== null) continue;
+      for(let c=3; c>0; c--) { setCountdown(c); await new Promise(r=>setTimeout(r,1000)); }
+      setCountdown('📸');
+      const v = videoRef.current; const cvs = canvasRef.current; const ctx = cvs.getContext('2d');
+      cvs.width = v.videoWidth; cvs.height = v.videoHeight; ctx.drawImage(v, 0, 0, cvs.width, cvs.height);
+      const b64 = cvs.toDataURL('image/jpeg', 0.9);
+      await window.electronAPI.saveCapture({ folderPath: store.sessionFolder, base64Data: b64, index: i+1 });
+      current[i] = b64; store.setCapturedPhotos([...current]);
+      await new Promise(r=>setTimeout(r,1000));
     }
+    setCountdown(null); store.setScreen('review');
+    if(videoRef.current?.srcObject) videoRef.current.srcObject.getTracks().forEach(t=>t.stop());
+  };
+
+  const processStitching = async () => {
+    store.setScreen('loading');
+    const res = await window.electronAPI.processImages({ photosBase64: store.capturedPhotos, templateId: customerTemplate.id, eventFolder: store.activeEvent.folder_name });
+    if(res.success) { setFinalResult(res); store.setScreen('result'); } else { alert("Gagal Merender"); store.setScreen('landing'); }
+  };
+
+  // ==========================================
+  // [BUG FIXED]: Fungsi render terpisah agar Modal tidak terpotong Early Return
+  // ==========================================
+  const renderScreen = () => {
+    if (store.currentScreen === 'loading') return <div className="flex h-screen items-center justify-center bg-retro-bg font-sys text-3xl">MEMUAT SISTEM...</div>;
+
+    if (store.currentScreen === 'session_manager') return (
+      <div className="flex flex-col items-center justify-center h-screen bg-retro-bg p-8 overflow-hidden">
+        <div className="retro-window w-full max-w-5xl bg-white flex flex-col h-[85vh]">
+          <div className="retro-header flex justify-between items-center">
+            <span>📅 MANAJEMEN SESI EVENT</span>
+            {!showCreateForm && <button onClick={()=>setShowCreateForm(true)} className="bg-white text-black px-4 font-bold border-2 border-black hover:bg-yellow-200">BUAT SESI BARU</button>}
+          </div>
+
+          <div className="p-8 flex flex-col flex-1 overflow-y-auto">
+            {!showCreateForm && (
+              <div className="flex flex-col h-full">
+                <h2 className="font-pixel text-2xl mb-6">10 Riwayat Sesi Terakhir</h2>
+                {store.recentEvents.length === 0 ? (
+                  <p className="font-sys text-xl text-gray-500">Belum ada riwayat event.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {store.recentEvents.map(ev => (
+                      <div key={ev.id} className="border-4 border-retro-border p-4 flex flex-col bg-gray-50 hover:bg-white hover:border-blue-500 group">
+                        <h3 className="font-sys text-2xl font-bold mb-2">{ev.nama_event}</h3>
+                        <p className="font-pixel text-[10px] text-gray-500 mb-4">{new Date(ev.created_at).toLocaleString()}</p>
+                        <button onClick={()=>reopenEvent(ev.id)} className="retro-btn py-2 text-sm mt-auto opacity-0 group-hover:opacity-100 transition-opacity">Buka & Lanjutkan Sesi Ini</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {showCreateForm && (
+              <div className="flex flex-col h-full">
+                <div className="flex items-center gap-4 mb-6">
+                  {store.recentEvents.length > 0 && <button onClick={()=>setShowCreateForm(false)} className="retro-btn-danger px-4 py-2 text-xs">KEMBALI</button>}
+                  <h2 className="font-pixel text-2xl">Buka Sesi Event Baru</h2>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-6 border-b-4 border-retro-border pb-6">
+                  <div className="flex flex-col font-sys text-xl">
+                    <label className="font-bold">Nama Event / Klien:</label>
+                    <input type="text" className="border-4 border-retro-border p-2 outline-none" value={newEventData.nama_event} onChange={e=>setNewEventData({...newEventData, nama_event: e.target.value})} placeholder="Cth: Wedding_Agus_Siti" />
+                  </div>
+                  <div className="flex flex-col font-sys text-xl">
+                    <label className="font-bold">Saldo Awal / Deposit (Rp):</label>
+                    <input type="text" className="border-4 border-retro-border p-2 outline-none" value={formatRp(newEventData.saldo_awal)} onChange={e=>setNewEventData({...newEventData, saldo_awal: parseRp(e.target.value)})} placeholder="0" />
+                  </div>
+                </div>
+
+                <div className="flex flex-col font-sys text-xl mt-6 flex-1 overflow-y-auto pr-4">
+                  <label className="font-bold mb-4">Pilih & Atur Harga Frame (WAJIB):</label>
+                  {store.templates.length === 0 && <p className="text-red-500 text-sm">Belum ada template. Tekan Ctrl+Shift+T untuk ke Master Library.</p>}
+                  
+                  <div className="grid grid-cols-3 gap-4 pb-10">
+                    {store.templates.filter(t=>t.is_visible).map(tpl => {
+                      const isSelected = selectedEventTemplates.find(t=>t.id === tpl.id);
+                      return (
+                        <div key={tpl.id} className={`border-4 p-2 flex flex-col gap-2 cursor-pointer transition-all ${isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-300 hover:border-blue-300'}`} onClick={(e) => { if(e.target.tagName !== 'INPUT') toggleEventTemplate(tpl); }}>
+                          <div className="h-[120px] bg-gray-200 flex justify-center"><img src={`http://localhost:3000/templates/${tpl.filename}`} className="h-full object-contain" /></div>
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" checked={!!isSelected} onChange={() => toggleEventTemplate(tpl)} className="w-5 h-5" />
+                            <span className="font-bold truncate text-sm">{tpl.filename}</span>
+                          </div>
+                          {isSelected && (
+                            <div className="mt-auto">
+                              <label className="text-xs font-bold text-retro-header">Harga Sesi Ini (Rp):</label>
+                              <input type="text" className="w-full border-2 border-black p-1 text-sm outline-none" value={formatRp(isSelected.override_price)} onChange={(e) => {
+                                setSelectedEventTemplates(prev => prev.map(p => p.id === tpl.id ? {...p, override_price: parseRp(e.target.value)} : p));
+                              }} />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                <button onClick={createEventSession} className="retro-btn py-4 text-xl mt-4 bg-retro-success shrink-0">BUKA EVENT SEKARANG</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+
+    if (store.currentScreen === 'landing') return (
+      <div className="flex flex-col items-center justify-center h-screen space-y-8 bg-retro-bg">
+        <div className="absolute top-4 left-4 bg-white border-4 border-retro-border px-4 py-2 font-pixel text-sm text-retro-header shadow-md animate-pulse">🔴 LIVE: {store.activeEvent?.nama_event}</div>
+        <div className="retro-window p-8 text-center animate-bounce">
+          <h1 className="font-pixel text-5xl text-retro-border mb-4">PHOTOBOOTH</h1>
+          <p className="font-sys text-2xl text-gray-600 tracking-wider">Tap anywhere to start</p>
+        </div>
+        <button onClick={() => { store.resetCustomerSession(); store.setScreen('template'); }} className="retro-btn px-10 py-6 text-2xl hover:brightness-110">MULAI SEKARANG</button>
+      </div>
+    );
+
+    if (store.currentScreen === 'template') {
+      const eventTemplates = JSON.parse(store.activeEvent?.templates_json || '[]');
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-retro-bg p-10">
+          <h1 className="font-pixel text-4xl mb-8">Pilih Frame Favoritmu</h1>
+          <div className="flex gap-8 overflow-y-auto max-w-6xl">
+            {eventTemplates.map(tpl => (
+              <div key={tpl.id} onClick={() => startCustomerPhoto(tpl)} className="retro-window w-[250px] bg-white cursor-pointer hover:scale-105 flex flex-col">
+                <div className="h-[350px] bg-gray-200 border-b-4 border-retro-border p-2 relative flex justify-center items-center">
+                  <img src={`http://localhost:3000/templates/${tpl.filename}`} className="max-w-full max-h-full object-contain drop-shadow-lg" />
+                  <div className="absolute top-2 right-2 font-pixel text-[10px] text-white px-2 py-1 border-2 border-retro-border bg-retro-header">
+                    {tpl.override_price <= 0 ? 'GRATIS' : `Rp ${(tpl.override_price/1000)}k`}
+                  </div>
+                </div>
+                <div className="p-4 text-center font-pixel text-sm group-hover:bg-blue-100">PILIH FRAME</div>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => store.setScreen('landing')} className="retro-btn-danger px-8 py-3 absolute bottom-8 left-8">KEMBALI</button>
+        </div>
+      );
+    }
+
+    if (store.currentScreen === 'payment') return <div className="flex flex-col items-center justify-center h-screen bg-retro-bg"><div className="retro-window w-[400px] p-6 bg-white text-center"><h2 className="font-pixel text-2xl mb-4">Scan QRIS</h2><div className="font-sys text-5xl font-bold text-retro-success mb-6">Rp {store.paymentAmount.toLocaleString('id-ID')}</div><div className="w-[280px] h-[280px] mx-auto border-4 border-retro-border flex items-center justify-center bg-gray-100 mb-6">{qrUrl ? <img src={qrUrl} className="w-[90%] h-[90%] object-contain" /> : <div className="animate-spin text-4xl">⏳</div>}</div><div className="font-sys text-2xl font-bold text-red-600">{statusText}</div></div></div>;
+    if (store.currentScreen === 'camera') return <div className="flex flex-col items-center justify-center h-screen bg-black relative"><h2 className="absolute top-8 font-pixel text-white z-10 text-2xl">Sisa Jepretan: {store.capturedPhotos.filter(p=>p===null).length}</h2><div className="relative border-8 border-retro-border rounded-xl overflow-hidden bg-gray-800"><video ref={videoRef} autoPlay playsInline muted className="w-[800px] h-[600px] object-cover scale-x-[-1]"></video>{countdown && <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-20"><span className="font-pixel text-6xl text-white drop-shadow-[4px_4px_0_rgba(242,109,109,1)]">{countdown}</span></div>}</div><button onClick={takePhotoAction} disabled={countdown !== null} className={`retro-btn px-8 py-4 mt-8 text-xl ${countdown !== null ? 'opacity-50' : ''}`}>📸 MULAI FOTO</button><canvas ref={canvasRef} className="hidden"></canvas></div>;
+    if (store.currentScreen === 'review') return <div className="flex flex-col items-center justify-center h-screen bg-retro-bg space-y-8"><h1 className="font-pixel text-4xl">Review Hasil</h1><div className="flex gap-6 max-w-6xl overflow-x-auto p-4">{store.capturedPhotos.map((photo, i) => (<div key={i} className="retro-window p-4 flex flex-col items-center bg-white shrink-0"><h3 className="font-pixel text-sm mb-2">Gaya {i + 1}</h3>{photo ? <img src={photo} className="w-[200px] h-[150px] object-cover border-4 border-retro-border scale-x-[-1]" /> : <div className="w-[200px] h-[150px] bg-gray-300 border-4 border-retro-border"></div>}<button onClick={() => { const nw = [...store.capturedPhotos]; nw[i]=null; store.setCapturedPhotos(nw); store.decrementRetake(); store.setScreen('camera'); startCameraHardware(); }} disabled={store.retakesLeft <= 0 || !photo} className="mt-4 px-4 py-2 font-pixel text-xs border-2 border-retro-border bg-gray-200 hover:bg-yellow-100 disabled:opacity-50">🔄 Retake</button></div>))}</div><div className="flex flex-col items-center gap-4 mt-4"><p className="font-sys text-xl font-bold bg-white px-4 py-1 border-2 border-retro-border">Sisa Retake: {store.retakesLeft}</p><button onClick={processStitching} className="retro-btn px-10 py-4 text-2xl bg-retro-success">🖨️ CETAK SEKARANG</button></div></div>;
+    if (store.currentScreen === 'result') return <div className="flex flex-col items-center justify-center h-screen space-y-6 bg-retro-bg"><h1 className="font-pixel text-3xl">Selesai! Scan untuk Download</h1><div className="flex gap-10"><div className="retro-window bg-white p-4 h-[400px] flex"><img src={`file://${finalResult?.printPath}`} className="max-h-full object-contain border-4" /></div><div className="retro-window bg-white p-8 flex flex-col items-center justify-center gap-4"><div className="border-4 p-2 bg-gray-100"><img src={finalResult?.qrCode} className="w-[200px] h-[200px]" /></div></div></div><button onClick={() => { store.resetCustomerSession(); store.setScreen('landing'); }} className="retro-btn px-8 py-4 mt-8">KEMBALI KE AWAL</button></div>;
+    
+    return null;
   };
 
   return (
-    <div className="w-screen h-screen overflow-hidden">
+    <div className="w-screen h-screen overflow-hidden relative">
       
-      {/* ---------------- ROUTER LAYAR USER ---------------- */}
-      
-      {store.currentScreen === 'landing' && (
-        <div className="flex flex-col items-center justify-center h-screen space-y-12">
-          <div className="retro-window p-8 text-center animate-bounce">
-            <h1 className="font-pixel text-5xl text-retro-border mb-4">PHOTOBOOTH</h1>
-            <p className="font-sys text-2xl text-gray-600 tracking-wider">Tap anywhere to start</p>
-          </div>
-          <button onClick={() => { store.resetSession(); store.setScreen('template'); }} className="retro-btn px-10 py-6 text-2xl hover:brightness-110">
-            MULAI SEKARANG
-          </button>
-        </div>
-      )}
+      {/* KONTEN LAYAR UTAMA (DIJAMIN TIDAK MEMOTONG MODAL) */}
+      {renderScreen()}
 
-      {store.currentScreen === 'template' && <TemplateScreen onSelectTemplate={handleTemplateSelect} />}
-      
-      {store.currentScreen === 'payment' && (
-        <div className="flex flex-col items-center justify-center h-screen">
-          <div className="retro-window p-8 text-center font-sys text-3xl">
-            [LAYAR QRIS MIDTRANS]<br/><br/>
-            Rp {store.paymentAmount.toLocaleString('id-ID')}<br/><br/>
-            <button onClick={() => store.setScreen('camera')} className="retro-btn px-6 py-2 text-sm">Bypass (Test)</button>
-          </div>
-        </div>
-      )}
+      {/* ==========================================
+          MODAL OVERLAYS (Z-INDEX TERTINGGI)
+          Akan selalu muncul jika shortcut ditekan
+      ========================================== */}
 
-      {store.currentScreen === 'camera' && (
-        <div className="flex flex-col items-center justify-center h-screen">
-          <div className="retro-window p-8 text-center font-sys text-3xl bg-black text-white">
-            [LAYAR KAMERA AKTIF]<br/>
-            Mengambil {typeof selectedTemplate?.slots === 'string' ? JSON.parse(selectedTemplate.slots).length : (selectedTemplate?.slots?.length || 0)} Foto<br/><br/>
-            <button onClick={() => store.setScreen('review')} className="retro-btn px-6 py-2 text-sm">Selesai Foto (Test)</button>
-          </div>
-        </div>
-      )}
-
-      {store.currentScreen === 'review' && (
-        <div className="flex flex-col items-center justify-center h-screen">
-          <div className="retro-window p-8 text-center font-sys text-3xl">
-            [LAYAR REVIEW]<br/><br/>
-            <button onClick={() => store.setScreen('landing')} className="retro-btn px-6 py-2 text-sm">Cetak & Kembali</button>
-          </div>
-        </div>
-      )}
-
-      {/* ---------------- OVERLAY MENU ADMIN ---------------- */}
-      
-      {store.isAdminOpen && (
-        <div className="fixed top-0 left-0 w-full h-full bg-black/80 flex justify-center items-center z-50 p-10">
-          <div className="retro-window w-full max-w-5xl h-full max-h-[800px] flex flex-col bg-gray-100">
-            
-            <div className="retro-header">
-              <span>SYSTEM.INI - [ADMIN DASHBOARD]</span>
-              <button onClick={store.toggleAdmin} className="text-white hover:text-black">X</button>
-            </div>
-            
-            <div className="flex flex-1 overflow-hidden">
-              <div className="w-[200px] border-r-4 border-retro-border bg-white p-4 flex flex-col gap-4 font-pixel text-xs shrink-0">
-                <button onClick={() => setAdminTab('umum')} className={`p-4 text-left border-4 border-transparent ${adminTab === 'umum' ? 'bg-blue-200 border-retro-border shadow-[2px_2px_0_0_#333]' : 'hover:bg-gray-100'}`}>⚙️ PENGATURAN UMUM</button>
-                <button onClick={() => setAdminTab('template')} className={`p-4 text-left border-4 border-transparent ${adminTab === 'template' ? 'bg-blue-200 border-retro-border shadow-[2px_2px_0_0_#333]' : 'hover:bg-gray-100'}`}>🖼️ MANAJEMEN TEMPLATE</button>
-                
-                <div className="mt-auto border-t-4 border-retro-border pt-4 text-center font-sys text-sm">
-                  <p className="font-bold mb-2">Remote Kasir QR</p>
-                  <div className="bg-white p-2 border-2 border-black inline-block">
-                    {store.serverIP ? <QRCodeSVG value={`http://${store.serverIP}:3000`} size={120} /> : 'Memuat IP...'}
-                  </div>
-                  <p className="mt-1 font-pixel text-[8px] break-all">http://{store.serverIP}:3000</p>
-                </div>
+      {isGlobalOpen && (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-[100] p-10">
+          <div className="retro-window w-[800px] bg-white flex flex-col max-h-[90vh]">
+            <div className="retro-header bg-gray-800">GLOBAL SETTINGS.INI <button onClick={()=>setGlobalOpen(false)}>X</button></div>
+            <form onSubmit={saveGlobalSettings} className="p-8 overflow-y-auto flex flex-col gap-6 font-sys text-xl">
+              <div className="flex items-center gap-4 bg-yellow-100 p-4 border-2 border-black">
+                <label className="font-bold">Mode Aplikasi:</label>
+                <select className="border-2 border-black p-1 outline-none" value={globalData.app_mode} onChange={e=>setGlobalData({...globalData, app_mode: e.target.value})}>
+                  <option value="online">ONLINE (Midtrans Aktif)</option>
+                  <option value="offline">OFFLINE (Bayar Kasir)</option>
+                </select>
               </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col"><label className="font-bold">HPP Kertas (Rp)</label><input type="text" className="border-4 p-2 outline-none" value={formatRp(globalData.hpp_kertas)} onChange={e=>setGlobalData({...globalData, hpp_kertas: parseRp(e.target.value)})} /></div>
+                <div className="flex flex-col"><label className="font-bold">HPP Tinta (Rp)</label><input type="text" className="border-4 p-2 outline-none" value={formatRp(globalData.hpp_tinta)} onChange={e=>setGlobalData({...globalData, hpp_tinta: parseRp(e.target.value)})} /></div>
+                <div className="flex flex-col"><label className="font-bold">Biaya Ops (Rp)</label><input type="text" className="border-4 p-2 outline-none" value={formatRp(globalData.biaya_ops)} onChange={e=>setGlobalData({...globalData, biaya_ops: parseRp(e.target.value)})} /></div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="font-bold">Midtrans Server Key (Global):</label>
+                <input type="text" className="border-4 p-2 outline-none" value={globalData.midtrans_server_key} onChange={e=>setGlobalData({...globalData, midtrans_server_key: e.target.value})} />
+                <label className="font-bold">Midtrans Client Key (Global):</label>
+                <input type="text" className="border-4 p-2 outline-none" value={globalData.midtrans_client_key} onChange={e=>setGlobalData({...globalData, midtrans_client_key: e.target.value})} />
+              </div>
+              <button type="submit" className="retro-btn py-4 bg-retro-success mt-4">SIMPAN PENGATURAN MESIN</button>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div className="flex-1 p-6 overflow-y-auto">
-                
-                {adminTab === 'umum' && (
-                  <form onSubmit={handleSaveSettings} className="font-sys text-xl flex flex-col gap-4 max-w-2xl mx-auto">
-                    <h2 className="font-pixel text-lg mb-4 border-b-4 border-retro-border pb-2">Mode Operasional</h2>
-                    <div className="flex gap-6 mb-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="app_mode" value="online" checked={formData.app_mode === 'online'} onChange={(e) => setFormData({...formData, app_mode: e.target.value})} className="w-5 h-5" />
-                        <b>ONLINE</b> (Auto-Midtrans & GDrive)
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-retro-header">
-                        <input type="radio" name="app_mode" value="offline" checked={formData.app_mode === 'offline'} onChange={(e) => setFormData({...formData, app_mode: e.target.value})} className="w-5 h-5" />
-                        <b>OFFLINE</b> (Bayar di Kasir & Local Download)
-                      </label>
-                    </div>
-
-                    <h2 className="font-pixel text-lg mb-2 mt-4 border-b-4 border-retro-border pb-2">Data Event & HPP Dasar</h2>
-                    <div className="flex flex-col"><label>Nama Event:</label><input type="text" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.nama_event} onChange={e => setFormData({...formData, nama_event: e.target.value})} /></div>
-                    
-                    {/* [PERBAIKAN BUG]: Menambahkan min="0" dan Math.max pada input Umum */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col"><label>Saldo Awal (Rp):</label><input type="number" min="0" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.saldo_awal} onChange={e => setFormData({...formData, saldo_awal: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))})} /></div>
-                      <div className="flex flex-col"><label>Biaya Ops (Rp):</label><input type="number" min="0" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.biaya_ops} onChange={e => setFormData({...formData, biaya_ops: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))})} /></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col"><label>HPP Kertas (Rp):</label><input type="number" min="0" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.hpp_kertas} onChange={e => setFormData({...formData, hpp_kertas: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))})} /></div>
-                      <div className="flex flex-col"><label>HPP Tinta (Rp):</label><input type="number" min="0" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.hpp_tinta} onChange={e => setFormData({...formData, hpp_tinta: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))})} /></div>
-                    </div>
-                    
-                    <h2 className="font-pixel text-lg mb-2 mt-4 border-b-4 border-retro-border pb-2">API Keys (Midtrans Sandbox)</h2>
-                    <div className="flex flex-col"><label>Server Key:</label><input type="text" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.midtrans_server_key} onChange={e => setFormData({...formData, midtrans_server_key: e.target.value})} /></div>
-                    <div className="flex flex-col"><label>Client Key:</label><input type="text" className="border-4 border-retro-border p-2 bg-white outline-none" value={formData.midtrans_client_key} onChange={e => setFormData({...formData, midtrans_client_key: e.target.value})} /></div>
-                    
-                    <button type="submit" className="retro-btn py-3 mt-6">SAVE_SETTINGS.EXE</button>
-                  </form>
-                )}
-
-                {adminTab === 'template' && (
-                  <div className="flex flex-col gap-6">
-                    <button onClick={handleUploadTemplate} className="retro-btn py-4 text-xl self-start px-8">➕ UPLOAD TEMPLATE BARU (PNG)</button>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {store.templates.map(tpl => {
-                        const slotCount = typeof tpl.slots === 'string' ? JSON.parse(tpl.slots).length : (tpl.slots?.length || 0);
-                        return (
-                        <div key={tpl.id} className="bg-white border-4 border-retro-border p-4 flex gap-4 shadow-[4px_4px_0_0_#333]">
-                          <div className="w-[120px] h-[160px] bg-gray-200 border-2 border-gray-400 flex items-center justify-center overflow-hidden shrink-0">
-                            <img src={`http://localhost:3000/templates/${tpl.filename}`} alt="tpl" className="max-w-full max-h-full object-contain" />
-                          </div>
-                          <div className="flex flex-col flex-1 font-sys text-lg gap-2 overflow-hidden">
-                            <p className="font-bold border-b-2 border-gray-300 pb-1 break-all truncate">{tpl.filename}</p>
-                            
-                            <div className="flex items-center justify-between">
-                              <label className="flex items-center gap-1 cursor-pointer">
-                                <input type="checkbox" checked={tpl.is_visible === 1} onChange={(e) => handleUpdateTemplateAttr(tpl, 'is_visible', e.target.checked ? 1 : 0)} /> Aktif (Tampil)
-                              </label>
-                              <label className="flex items-center gap-1 cursor-pointer text-retro-header font-bold">
-                                <input type="checkbox" checked={tpl.is_free === 1} onChange={(e) => handleUpdateTemplateAttr(tpl, 'is_free', e.target.checked ? 1 : 0)} /> FREE
-                              </label>
-                            </div>
-
-                            {!tpl.is_free && (
-                              <div className="flex items-center gap-2">
-                                <span>Harga: Rp</span>
-                                {/* [PERBAIKAN BUG]: Menggunakan defaultValue dan onBlur agar keyboard bisa digunakan bebas tanpa kehilangan fokus */}
-                                <input 
-                                  type="number" 
-                                  min="0"
-                                  className="border-2 border-retro-border px-1 w-24 outline-none" 
-                                  defaultValue={tpl.price} 
-                                  onBlur={(e) => {
-                                    const val = Math.max(0, Number(e.target.value) || 0);
-                                    e.target.value = val; // Memaksa UI menampilkan angka valid jika user mengetik minus
-                                    if (val !== tpl.price) {
-                                      handleUpdateTemplateAttr(tpl, 'price', val);
-                                    }
-                                  }} 
-                                />
-                              </div>
-                            )}
-
-                            <p className="text-sm text-gray-600">Terpasang: {slotCount} Slot Foto</p>
-
-                            <div className="mt-auto flex gap-2">
-                              <button onClick={() => setEditingTemplate(tpl)} className="retro-btn py-1 px-2 flex-1 text-xs">Atur Slot</button>
-                              <button onClick={() => handleDeleteTemplate(tpl.id)} className="retro-btn-danger py-1 px-2 text-xs font-bold">X</button>
-                            </div>
-                          </div>
-                        </div>
-                      )})}
+      {isTemplateOpen && (
+        <div className="fixed inset-0 bg-black/80 flex justify-center items-center z-[100] p-10">
+          <div className="retro-window w-full max-w-6xl bg-gray-100 flex flex-col h-[90vh]">
+            <div className="retro-header bg-blue-800">MASTER TEMPLATE LIBRARY <button onClick={()=>setTemplateOpen(false)}>X</button></div>
+            <div className="p-6 flex flex-col gap-6 overflow-y-auto">
+              <div className="flex justify-between items-center bg-white p-4 border-4 border-retro-border">
+                <div><h2 className="font-pixel text-xl">Database Master Template</h2><p className="font-sys text-gray-600">Template di sini belum aktif sampai dimasukkan ke dalam Sesi Event.</p></div>
+                <button onClick={uploadMasterTemplate} className="retro-btn px-6 py-3">➕ UPLOAD PNG BARU</button>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {store.templates.map(tpl => (
+                  <div key={tpl.id} className="bg-white border-4 p-4 flex gap-4">
+                    <div className="w-[100px] h-[140px] bg-gray-200 flex justify-center items-center shrink-0 border-2"><img src={`http://localhost:3000/templates/${tpl.filename}`} className="max-h-full object-contain" /></div>
+                    <div className="flex flex-col flex-1 font-sys gap-2">
+                      <p className="font-bold truncate border-b-2 pb-1">{tpl.filename}</p>
+                      <div className="flex gap-4">
+                        <label className="text-sm"><input type="checkbox" checked={tpl.is_visible===1} onChange={e=>updateMasterAttr(tpl, 'is_visible', e.target.checked?1:0)} /> Tampil di List</label>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm font-bold">Harga Dasar: Rp</span>
+                        <input type="text" className="border-2 p-1 w-24 outline-none" value={formatRp(tpl.price)} onChange={(e) => updateMasterAttr(tpl, 'price', parseRp(e.target.value))} />
+                      </div>
+                      <div className="mt-auto flex gap-2">
+                        <button onClick={() => setEditingTemplate(tpl)} className="retro-btn flex-1 py-1 text-xs">Atur Slot</button>
+                        <button onClick={() => { if(confirm("Hapus master template?")) window.electronAPI.deleteTemplate(tpl.id).then(()=>store.fetchTemplates()); }} className="retro-btn-danger px-3 py-1 text-xs font-bold">X</button>
+                      </div>
                     </div>
                   </div>
-                )}
-
+                ))}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {editingTemplate && (
-        <VisualEditor 
-          template={editingTemplate} 
-          onCancel={() => setEditingTemplate(null)}
-          onSave={async (newSlots) => {
-            await handleUpdateTemplateAttr(editingTemplate, 'slots', newSlots);
-            setEditingTemplate(null);
-            alert("Posisi slot berhasil disimpan!");
-          }}
-        />
-      )}
-
+      {editingTemplate && <VisualEditor template={editingTemplate} onCancel={()=>setEditingTemplate(null)} onSave={async(s) => { await updateMasterAttr(editingTemplate, 'slots', s); setEditingTemplate(null); alert("Disimpan!"); }} />}
     </div>
   );
 }

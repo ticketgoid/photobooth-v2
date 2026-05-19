@@ -5,63 +5,65 @@ const { app } = require('electron');
 const dbPath = path.join(app.getPath('userData'), 'photobooth_v2.db');
 const db = new Database(dbPath);
 
-// Inisialisasi Tabel
+// ==========================================
+// INISIALISASI TABEL (MULTI-EVENT ARCHITECTURE)
+// ==========================================
 db.exec(`
+    -- TABEL PENGATURAN MESIN GLOBAL (Shortcut: Ctrl+Shift+P)
     CREATE TABLE IF NOT EXISTS settings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nama_event TEXT,
-        saldo_awal INTEGER,
-        hpp_kertas INTEGER,
-        hpp_tinta INTEGER,
-        biaya_ops INTEGER,
-        midtrans_server_key TEXT,
-        midtrans_client_key TEXT,
+        hpp_kertas INTEGER DEFAULT 3000,
+        hpp_tinta INTEGER DEFAULT 2000,
+        biaya_ops INTEGER DEFAULT 0,
+        midtrans_server_key TEXT DEFAULT '',
+        midtrans_client_key TEXT DEFAULT '',
         app_mode TEXT DEFAULT 'online' 
     );
     
-    -- [BARU] Pengganti file templates.json
+    -- TABEL MASTER TEMPLATE (Shortcut: Ctrl+Shift+T)
     CREATE TABLE IF NOT EXISTS templates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         filename TEXT UNIQUE,
         filepath TEXT,
         is_free INTEGER DEFAULT 0,
-        price INTEGER DEFAULT 15000,
+        price INTEGER DEFAULT 15000, -- Harga Dasar (HET)
         is_visible INTEGER DEFAULT 1,
         width INTEGER,
         height INTEGER,
         slots_json TEXT DEFAULT '[]'
     );
     
+    -- TABEL SESI EVENT (OTAK OPERASIONAL BARU)
+    CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama_event TEXT,
+        folder_name TEXT,
+        saldo_awal INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1, -- 1: Aktif, 0: Ditutup/Exit
+        templates_json TEXT DEFAULT '[]', -- Array { id_template, override_price }
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    -- TABEL TRANSAKSI / CUSTOMER FOTO
     CREATE TABLE IF NOT EXISTS sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nama_user TEXT,
+        event_id INTEGER,
         folder_name TEXT,
         waktu TEXT,
         harga_jual INTEGER,
         status_cetak TEXT,
-        link_gdrive TEXT
-    );
-    
-    CREATE TABLE IF NOT EXISTS print_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id INTEGER,
-        waktu_cetak TEXT
+        link_gdrive TEXT,
+        token_download TEXT
     );
 `);
 
-// Auto-migrate (Keamanan jika DB sudah terlanjur dibuat di sesi sebelumnya)
-try { db.exec("ALTER TABLE settings ADD COLUMN midtrans_server_key TEXT DEFAULT ''"); } catch(e) {}
-try { db.exec("ALTER TABLE settings ADD COLUMN midtrans_client_key TEXT DEFAULT ''"); } catch(e) {}
-try { db.exec("ALTER TABLE settings ADD COLUMN app_mode TEXT DEFAULT 'online'"); } catch(e) {}
-
-// Seeder Awal
+// Seeder Awal untuk Settings (Hanya 1 baris ID=1 yang akan ada selamanya)
 const stmt = db.prepare('SELECT COUNT(*) as count FROM settings');
 if (stmt.get().count === 0) {
     db.prepare(`
-        INSERT INTO settings (
-            nama_event, saldo_awal, hpp_kertas, hpp_tinta, biaya_ops, midtrans_server_key, midtrans_client_key, app_mode
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('Event Default', 0, 3000, 2000, 0, '', '', 'online');
+        INSERT INTO settings (hpp_kertas, hpp_tinta, biaya_ops, midtrans_server_key, midtrans_client_key, app_mode) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).run(3000, 2000, 0, '', '', 'online');
 }
 
 module.exports = db;

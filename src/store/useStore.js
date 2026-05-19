@@ -1,54 +1,47 @@
 import { create } from 'zustand';
 
 export const useStore = create((set) => ({
-    // === GLOBAL DATA ===
     settings: null,
-    templates: [], // Array dari database SQLite
-    serverIP: null, // IP Lokal Kiosk (Untuk QR Kasir)
+    templates: [], 
+    serverIP: null,
     
-    // === UI STATE ===
-    isAdminOpen: false,
-    currentScreen: 'landing', 
+    activeEvent: null, 
+    recentEvents: [], // [BARU] Menampung 10 event terakhir
     
-    // === SESSION STATE ===
+    isAdminOpen: false, 
+    currentScreen: 'loading', 
+    
     sessionFolder: null,
-    capturedPhotos: [null, null, null],
+    capturedPhotos: [],
     retakesLeft: 3,
-    
-    // === PAYMENT STATE ===
-    paymentAmount: 15000,
+    paymentAmount: 0,
     nextScreenAfterPayment: 'camera', 
     
-    // === ACTIONS: UI & ROUTING ===
-    toggleAdmin: () => set((state) => ({ isAdminOpen: !state.isAdminOpen })),
     setScreen: (screenName) => set({ currentScreen: screenName }),
     
-    // === ACTIONS: SESSION ===
     setSessionFolder: (path) => set({ sessionFolder: path }),
     setCapturedPhotos: (photos) => set({ capturedPhotos: photos }),
     decrementRetake: () => set((state) => ({ retakesLeft: state.retakesLeft - 1 })),
-    resetSession: () => set({ capturedPhotos: [null, null, null], retakesLeft: 3, sessionFolder: null }),
-    
-    // === ACTIONS: PAYMENT ===
+    resetCustomerSession: () => set({ capturedPhotos: [], retakesLeft: 3, sessionFolder: null }),
     setupPayment: (amount, nextScreen) => set({ paymentAmount: amount, nextScreenAfterPayment: nextScreen, currentScreen: 'payment' }),
     
-    // === ACTIONS: ASYNC FETCHING ===
-    fetchSettings: async () => {
-        if (window.electronAPI) {
-            const data = await window.electronAPI.getSettings();
-            set({ settings: data });
-        }
+    fetchSettings: async () => { if (window.electronAPI) set({ settings: await window.electronAPI.getSettings() }); },
+    fetchTemplates: async () => { if (window.electronAPI) set({ templates: await window.electronAPI.getTemplates() || [] }); },
+    fetchServerIP: async () => { if (window.electronAPI) set({ serverIP: await window.electronAPI.getServerIP() }); },
+    
+    // [BARU] Fetch riwayat event
+    fetchRecentEvents: async () => {
+        if (window.electronAPI) set({ recentEvents: await window.electronAPI.getRecentEvents() || [] });
     },
-    fetchTemplates: async () => {
+
+    fetchActiveEvent: async () => {
         if (window.electronAPI) {
-            const data = await window.electronAPI.getTemplates();
-            set({ templates: data || [] });
-        }
-    },
-    fetchServerIP: async () => {
-        if (window.electronAPI) {
-            const ip = await window.electronAPI.getServerIP();
-            set({ serverIP: ip });
+            const event = await window.electronAPI.getActiveEvent();
+            if (event) {
+                set({ activeEvent: event, currentScreen: 'landing' });
+            } else {
+                set({ activeEvent: null, currentScreen: 'session_manager' });
+            }
         }
     }
 }));
