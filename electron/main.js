@@ -159,6 +159,15 @@ ipcMain.handle('delete-template', async (event, id) => {
 // ==========================================
 // 7. IPC HANDLERS: TRANSAKSI CUSTOMER & ENGINE
 // ==========================================
+
+// [BUG FIXED]: Force Migration untuk file Database Lama yang belum terupdate
+try { db.exec("ALTER TABLE sessions ADD COLUMN event_id INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE sessions ADD COLUMN customer_name TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE sessions ADD COLUMN folder_name TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE sessions ADD COLUMN waktu TEXT"); } catch(e) {}
+try { db.exec("ALTER TABLE sessions ADD COLUMN harga_jual INTEGER"); } catch(e) {}
+try { db.exec("ALTER TABLE sessions ADD COLUMN status_cetak TEXT"); } catch(e) {}
+
 ipcMain.handle('start-customer-session', async (event, eventId) => {
     const ev = db.prepare('SELECT folder_name FROM events WHERE id=?').get(eventId);
     if (!ev) throw new Error("Event tidak ditemukan!");
@@ -174,7 +183,8 @@ ipcMain.handle('save-capture', async (event, { folderPath, base64Data, index }) 
     catch (err) { return { success: false, error: err.message }; }
 });
 
-ipcMain.handle('process-images', async (event, { photosBase64, templateId, eventFolder }) => {
+// [PERBAIKAN]: Menangkap customerName dan price, lalu menyimpan ke Database
+ipcMain.handle('process-images', async (event, { photosBase64, templateId, eventFolder, eventId, customerName, price }) => {
     try {
         const tpl = db.prepare('SELECT * FROM templates WHERE id=?').get(templateId);
         const slots = JSON.parse(tpl.slots_json);
@@ -185,15 +195,45 @@ ipcMain.handle('process-images', async (event, { photosBase64, templateId, event
         compositeOps.push({ input: tpl.filepath, top: 0, left: 0 });
 
         const outputFilename = `print-${Date.now()}.png`;
-        const outputPath = path.join(OUTPUT_PATH, eventFolder, outputFilename); // Simpan di dalam folder Event
+        const outputPath = path.join(OUTPUT_PATH, eventFolder, outputFilename); 
 
         await sharp({ create: { width: tpl.width, height: tpl.height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
           .composite(compositeOps).png().toFile(outputPath);
 
-        // [PERUBAHAN]: URL QR Diarahkan secara relatif ke folder event
+        // Pencatatan Transaksi ke Database
+        const waktu = new Date().toLocaleString('id-ID');
+        db.prepare(`INSERT INTO sessions (event_id, customer_name, folder_name, waktu, harga_jual, status_cetak) VALUES (?, ?, ?, ?, ?, ?)`).run(eventId, customerName || 'Tanpa Nama', eventFolder, waktu, price || 0, 'TERCETAK');
+
         const downloadUrl = `http://${serverIP}:${PORT}/download/${eventFolder}/${outputFilename}`;
         return { success: true, printPath: outputPath, qrCode: await qrcode.toDataURL(downloadUrl), downloadUrl };
     } catch (err) { return { success: false, error: err.message }; }
+});
+
+// [BARU] Logika Agregasi Dashboard Live P&L
+ipcMain.handle('get-dashboard-data', (event, eventId) => {
+    const sessions = db.prepare('SELECT * FROM sessions WHERE event_id = ? ORDER BY id DESC').all(eventId);
+    const ev = db.prepare('SELECT * FROM events WHERE id=?').get(eventId);
+    const settings = db.prepare('SELECT * FROM settings WHERE id=1').get();
+    const hpp_total = (settings.hpp_kertas || 0) + (settings.hpp_tinta || 0) + (settings.biaya_ops || 0);
+    
+    let total_revenue = 0;
+    sessions.forEach(s => { total_revenue += s.harga_jual; });
+    let total_beban_hpp = sessions.length * hpp_total;
+    let saldo_awal = ev?.saldo_awal || 0;
+    
+    return {
+        sessions,
+        stats: {
+            total_trx: sessions.length,
+            total_revenue,
+            total_beban_hpp,
+            saldo_awal,
+            // Rumus Logis: Saldo Sisa = Deposit Awal - Total Beban HPP Cetak
+            sisa_saldo: saldo_awal - total_beban_hpp,
+            // Profit Murni dari acara ini
+            laba_bersih: total_revenue - total_beban_hpp
+        }
+    };
 });
 
 // ==========================================
