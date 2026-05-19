@@ -6,21 +6,17 @@
 
 body {
   @apply bg-retro-bg overflow-hidden select-none;
-  /* overflow-hidden dan select-none wajib untuk aplikasi Kiosk agar user tidak bisa scroll/block text */
 }
 
 @layer components {
-  /* Box standar gaya retro */
   .retro-window {
     @apply bg-retro-window border-4 border-retro-border shadow-[8px_8px_0px_0px_rgba(51,51,51,1)];
   }
   
-  /* Header jendela retro */
   .retro-header {
     @apply bg-retro-header border-b-4 border-retro-border px-4 py-2 font-pixel text-white flex justify-between items-center text-sm tracking-widest;
   }
   
-  /* Tombol interaktif retro */
   .retro-btn {
     @apply bg-retro-success border-4 border-retro-border font-pixel text-white shadow-[4px_4px_0px_0px_rgba(51,51,51,1)] 
     active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer;
@@ -30,4 +26,30 @@ body {
     @apply bg-retro-header border-4 border-retro-border font-pixel text-white shadow-[4px_4px_0px_0px_rgba(51,51,51,1)] 
     active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all cursor-pointer;
   }
+}
+
+/* =========================================
+   VISUAL EDITOR STYLES (SET 3)
+   ========================================= */
+.editor-canvas-container {
+  @apply relative overflow-hidden border-4 border-retro-border bg-gray-200 shadow-inner;
+  /* Pattern kotak-kotak transparan ala Photoshop */
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                    linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+                    linear-gradient(45deg, transparent 75%, #ccc 75%), 
+                    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.slot-box {
+  @apply absolute border-4 border-blue-500 bg-blue-500/30 flex items-center justify-center font-pixel text-white text-2xl drop-shadow-md cursor-grab;
+}
+
+.slot-box:active {
+  @apply cursor-grabbing bg-blue-500/50;
+}
+
+.resize-handle {
+  @apply absolute right-[-6px] bottom-[-6px] w-[16px] h-[16px] bg-red-500 border-2 border-white cursor-se-resize rounded-full;
 }
